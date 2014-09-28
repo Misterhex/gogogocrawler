@@ -25,7 +25,7 @@ func CrawlMovie() chan Movie {
 
 	go func() {
 
-		for _, category := range getCategories()[:1] {
+		for _, category := range getCategories() {
 			fmt.Printf("crawling %v\n\n", category)
 
 			var episodes = getMovieEpisode(category, make([]string, 0))
@@ -130,7 +130,7 @@ func getCategories() []string {
 	})
 	slice = append(slice, "http://www.gogoanime.com/category/miscellaneous")
 
-	// shuffle(slice)
+	shuffle(slice)
 
 	return slice
 }
