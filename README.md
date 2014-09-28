@@ -1,0 +1,4 @@
+gogogocrawler
+=============
+
+crawl gogoanime.com
