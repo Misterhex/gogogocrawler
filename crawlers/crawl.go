@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"math/rand"
+	"net/url"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -142,4 +144,18 @@ func shuffle(slice []string) {
 		j := rand.Intn(i + 1)
 		slice[i], slice[j] = slice[j], slice[i]
 	}
+}
+
+func GetRawSource(s string) string {
+	re, err := regexp.Compile("url:\\s\\'http\\:.*\\'\\,")
+	if err != nil {
+		panic(err)
+	}
+
+	s2 := re.FindString(s)
+	r := strings.Replace(s2, "url: '", "", -1)
+	r = strings.Replace(r, "',", "", -1)
+	r, _ = url.QueryUnescape(r)
+
+	return r
 }
