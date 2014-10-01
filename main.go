@@ -5,7 +5,18 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"time"
 )
+
+type Movie struct {
+	Id        bson.ObjectId "_id"
+	RawSource string
+	Source    string
+	Category  string
+	Episode   string
+	Origin    string
+	ScrapTime time.Time
+}
 
 const MongodbConnString = "mongodb://goblintechie:test1234@ds039850.mongolab.com:39850/goblintechdb"
 
@@ -17,27 +28,40 @@ func main() {
 
 		for movie := range movieResult {
 
-			saveMovieIfNotExist(movie)
+			saveMovieIfNotExistOrOutdated(movie)
 		}
 	}()
 
 	<-make(chan int)
 }
 
-func saveMovieIfNotExist(movie crawlers.Movie) {
+func saveMovieIfNotExistOrOutdated(movie crawlers.Movie) {
 
 	session, err := mgo.Dial(MongodbConnString)
 	defer session.Close()
 	c := session.DB("goblintechdb").C("movies")
 
-	queryMovieFromDb := crawlers.Movie{}
+	queriedMovie := Movie{}
 	err = c.Find(bson.M{
 		"source": movie.Source,
-	}).One(&queryMovieFromDb)
+	}).One(&queriedMovie)
 
 	if err != nil {
-		c.Insert(movie)
-
-		fmt.Printf("**** Saved **** %v\n\n", movie)
+		err = c.Insert(movie)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Printf("**** Saved **** %v\n\n", movie)
+		}
+	} else {
+		d := time.Since(queriedMovie.ScrapTime)
+		if d.Minutes() > 10 {
+			changeInfo, err := c.Upsert(bson.M{"_id": queriedMovie.Id}, movie)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Printf("**** Upserted **** %v %v %v\n\n", queriedMovie.Id, changeInfo, movie)
+			}
+		}
 	}
 }

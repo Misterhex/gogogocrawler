@@ -3,7 +3,9 @@ package crawlers
 import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"math/rand"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -11,10 +13,12 @@ import (
 )
 
 type Movie struct {
-	Source   string
-	Category string
-	Episode  string
-	Origin   string
+	RawSource string
+	Source    string
+	Category  string
+	Episode   string
+	Origin    string
+	ScrapTime time.Time
 }
 
 const origin = "http://www.gogoanime.com"
@@ -102,10 +106,12 @@ func getMovies(category string, episode string) []Movie {
 
 		if src, success := s.Attr("src"); success && (strings.HasSuffix(src, "mp4") || strings.HasSuffix(src, "flv")) {
 			movie := Movie{
-				Category: category,
-				Episode:  episode,
-				Source:   src,
-				Origin:   origin,
+				Category:  category,
+				Episode:   episode,
+				Source:    src,
+				Origin:    origin,
+				ScrapTime: time.Now(),
+				RawSource: getRawSource(src),
 			}
 			movies = append(movies, movie)
 		}
@@ -132,27 +138,45 @@ func getCategories() []string {
 	})
 	slice = append(slice, "http://www.gogoanime.com/category/miscellaneous")
 
-	shuffle(slice)
+	// shuffle(slice)
 
 	return slice
 }
 
-func shuffle(slice []string) {
-	rand.Seed(time.Now().UnixNano())
-	n := len(slice)
-	for i := n - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
-		slice[i], slice[j] = slice[j], slice[i]
+// func shuffle(slice []string) {
+// 	rand.Seed(time.Now().UnixNano())
+// 	n := len(slice)
+// 	for i := n - 1; i > 0; i-- {
+// 		j := rand.Intn(i + 1)
+// 		slice[i], slice[j] = slice[j], slice[i]
+// 	}
+// }
+
+func getRawSource(source string) string {
+
+	res, err := http.Get(source)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	htmlBytes, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s := string(htmlBytes)
+
+	return ParseRawSource(s)
 }
 
-func GetRawSource(s string) string {
+func ParseRawSource(html string) string {
 	re, err := regexp.Compile("url:\\s\\'http\\:.*\\'\\,")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-
-	s2 := re.FindString(s)
+	slice := re.FindAllString(html, -1)
+	s2 := slice[len(slice)-1]
 	r := strings.Replace(s2, "url: '", "", -1)
 	r = strings.Replace(r, "',", "", -1)
 	r, _ = url.QueryUnescape(r)

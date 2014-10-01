@@ -17,7 +17,7 @@ func TestShouldBeAbleToExtractPlaylist(t *testing.T) {
 	buf, err := ioutil.ReadAll(file)
 
 	s := string(buf)
-	r := GetRawSource(s)
+	r := ParseRawSource(s)
 	fmt.Println(r)
 
 }
