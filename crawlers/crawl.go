@@ -4,6 +4,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -137,19 +138,19 @@ func getCategories() []string {
 	})
 	slice = append(slice, "http://www.gogoanime.com/category/miscellaneous")
 
-	// shuffle(slice)
+	shuffle(slice)
 
 	return slice
 }
 
-// func shuffle(slice []string) {
-// 	rand.Seed(time.Now().UnixNano())
-// 	n := len(slice)
-// 	for i := n - 1; i > 0; i-- {
-// 		j := rand.Intn(i + 1)
-// 		slice[i], slice[j] = slice[j], slice[i]
-// 	}
-// }
+func shuffle(slice []string) {
+	rand.Seed(time.Now().UnixNano())
+	n := len(slice)
+	for i := n - 1; i > 0; i-- {
+		j := rand.Intn(i + 1)
+		slice[i], slice[j] = slice[j], slice[i]
+	}
+}
 
 func getRawSource(source string) string {
 

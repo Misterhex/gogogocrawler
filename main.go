@@ -22,13 +22,20 @@ const MongodbConnString = "mongodb://goblintechie:test1234@ds039850.mongolab.com
 
 func main() {
 
+	var movieResult = crawlers.CrawlMovie()
+
 	go func() {
 
-		var movieResult = crawlers.CrawlMovie()
+		for {
+			select {
+			case movie := <-movieResult:
+				saveMovieIfNotExistOrOutdated(movie)
 
-		for movie := range movieResult {
-
-			saveMovieIfNotExistOrOutdated(movie)
+			case <-time.After(time.Second * 10):
+				log.Println("no more movie detected ... closing channel and re-run")
+				close(movieResult)
+				movieResult = crawlers.CrawlMovie()
+			}
 		}
 	}()
 
@@ -36,7 +43,6 @@ func main() {
 }
 
 func saveMovieIfNotExistOrOutdated(movie crawlers.Movie) {
-
 	session, err := mgo.Dial(MongodbConnString)
 	defer session.Close()
 	c := session.DB("goblintechdb").C("movies")
