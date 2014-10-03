@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"github.com/misterhex/gogogocrawler/crawlers"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"log"
 	"time"
 )
 
@@ -49,18 +49,18 @@ func saveMovieIfNotExistOrOutdated(movie crawlers.Movie) {
 	if err != nil {
 		err = c.Insert(movie)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		} else {
-			fmt.Printf("**** Saved **** %v\n\n", movie)
+			log.Printf("**** Saved **** %v\n\n", movie)
 		}
 	} else {
 		d := time.Since(queriedMovie.ScrapTime)
 		if d.Minutes() > 10 {
 			changeInfo, err := c.Upsert(bson.M{"_id": queriedMovie.Id}, movie)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 			} else {
-				fmt.Printf("**** Upserted **** %v %v %v\n\n", queriedMovie.Id, changeInfo, movie)
+				log.Printf("**** Upserted **** %v %v %v\n\n", queriedMovie.Id, changeInfo, movie)
 			}
 		}
 	}

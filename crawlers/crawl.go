@@ -1,7 +1,6 @@
 package crawlers
 
 import (
-	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"io/ioutil"
 	"log"
@@ -25,23 +24,23 @@ const origin = "http://www.gogoanime.com"
 
 func CrawlMovie() chan Movie {
 
-	fmt.Println("starting to crawl movies ...")
+	log.Println("starting to crawl movies ...")
 
 	out := make(chan Movie)
 
 	go func() {
 
 		for _, category := range getCategories() {
-			fmt.Printf("crawling %v\n\n", category)
+			log.Printf("crawling %v\n\n", category)
 
 			var episodes = getMovieEpisode(category, make([]string, 0))
 
-			fmt.Printf("category %v -> episodes %v\n\n", category, episodes)
+			log.Printf("category %v -> episodes %v\n\n", category, episodes)
 
 			for _, episode := range episodes {
 				for _, movie := range getMovies(category, episode) {
 
-					fmt.Printf("episode %v -> source %v\n\n", category, movie.Source)
+					log.Printf("episode %v -> source %v\n\n", category, movie.Source)
 
 					out <- movie
 				}
