@@ -1,8 +1,8 @@
 package main
 
 import (
-	"./crawlers"
 	"fmt"
+	"github.com/misterhex/gogogocrawler/crawlers"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
