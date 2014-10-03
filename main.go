@@ -31,9 +31,8 @@ func main() {
 			case movie := <-movieResult:
 				saveMovieIfNotExistOrOutdated(movie)
 
-			case <-time.After(time.Second * 10):
-				log.Println("no more movie detected ... closing channel and re-run")
-				close(movieResult)
+			case <-time.After(time.Minute * 2):
+				log.Println("no more movie detected ... try to re-run")
 				movieResult = crawlers.CrawlMovie()
 			}
 		}
