@@ -136,8 +136,6 @@ func getCategories() []string {
 			slice = append(slice, href)
 		}
 	})
-	slice = append(slice, "http://www.gogoanime.com/category/miscellaneous")
-
 	shuffle(slice)
 
 	return slice
