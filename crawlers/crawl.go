@@ -1,6 +1,7 @@
 package crawlers
 
 import (
+	"errors"
 	"github.com/PuerkitoBio/goquery"
 	"io/ioutil"
 	"log"
@@ -105,15 +106,18 @@ func getMovies(category string, episode string) []Movie {
 	doc.Find("iframe").Each(func(i int, s *goquery.Selection) {
 
 		if src, success := s.Attr("src"); success && (strings.HasSuffix(src, "mp4") || strings.HasSuffix(src, "flv")) {
-			movie := Movie{
-				Category:  category,
-				Episode:   episode,
-				Source:    src,
-				Origin:    origin,
-				ScrapTime: time.Now(),
-				RawSource: getRawSource(src),
+			if rawSource, e := getRawSource(src); e != nil {
+				movie := Movie{
+					Category:  category,
+					Episode:   episode,
+					Source:    src,
+					Origin:    origin,
+					ScrapTime: time.Now(),
+					RawSource: rawSource,
+				}
+				movies = append(movies, movie)
 			}
-			movies = append(movies, movie)
+
 		}
 	})
 
@@ -150,7 +154,7 @@ func shuffle(slice []string) {
 	}
 }
 
-func getRawSource(source string) string {
+func getRawSource(source string) (string, error) {
 
 	res, err := http.Get(source)
 	if err != nil {
@@ -168,16 +172,20 @@ func getRawSource(source string) string {
 	return ParseRawSource(s)
 }
 
-func ParseRawSource(html string) string {
+func ParseRawSource(html string) (string, error) {
 	re, err := regexp.Compile("url:\\s\\'http\\:.*\\'\\,")
 	if err != nil {
 		log.Fatal(err)
 	}
 	slice := re.FindAllString(html, -1)
-	s2 := slice[len(slice)-1]
-	r := strings.Replace(s2, "url: '", "", -1)
-	r = strings.Replace(r, "',", "", -1)
-	r, _ = url.QueryUnescape(r)
+	if len(slice) == 0 {
+		return "", errors.New("unable to parse raw source")
+	} else {
+		s2 := slice[len(slice)-1]
+		r := strings.Replace(s2, "url: '", "", -1)
+		r = strings.Replace(r, "',", "", -1)
+		r, _ = url.QueryUnescape(r)
 
-	return r
+		return r, nil
+	}
 }
