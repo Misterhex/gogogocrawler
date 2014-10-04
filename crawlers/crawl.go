@@ -110,7 +110,7 @@ func getMovies(category string, episode string) []Movie {
 				movie := Movie{
 					Origin:    origin,
 					Category:  strings.Replace(category, origin, "", -1),
-					Episode:   strings.Replace(episode, origin, "", -1)
+					Episode:   strings.Replace(episode, origin, "", -1),
 					Source:    src,
 					RawSource: rawSource,
 					ScrapTime: time.Now(),
