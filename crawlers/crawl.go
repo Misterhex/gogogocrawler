@@ -106,7 +106,7 @@ func getMovies(category string, episode string) []Movie {
 	doc.Find("iframe").Each(func(i int, s *goquery.Selection) {
 
 		if src, success := s.Attr("src"); success && (strings.HasSuffix(src, "mp4") || strings.HasSuffix(src, "flv")) {
-			if rawSource, e := getRawSource(src); e != nil {
+			if rawSource, e := getRawSource(src); e == nil {
 				movie := Movie{
 					Category:  category,
 					Episode:   episode,
