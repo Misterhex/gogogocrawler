@@ -108,12 +108,12 @@ func getMovies(category string, episode string) []Movie {
 		if src, success := s.Attr("src"); success && (strings.HasSuffix(src, "mp4") || strings.HasSuffix(src, "flv")) {
 			if rawSource, e := getRawSource(src); e == nil {
 				movie := Movie{
-					Category:  category,
-					Episode:   episode,
-					Source:    src,
 					Origin:    origin,
-					ScrapTime: time.Now(),
+					Category:  strings.Replace(category, origin, "", -1),
+					Episode:   strings.Replace(episode, origin, "", -1)
+					Source:    src,
 					RawSource: rawSource,
+					ScrapTime: time.Now(),
 				}
 				movies = append(movies, movie)
 			}
