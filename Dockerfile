@@ -10,7 +10,7 @@ WORKDIR /go/src/github.com/misterhex/gogogocrawler
 RUN go get .
 RUN go build /go/src/github.com/misterhex/gogogocrawler/main.go
 
-# Run the outyet command by default when the container starts.
+# Run the crawler by default when the container starts.
 ENTRYPOINT /go/src/github.com/misterhex/gogogocrawler/main
 
 
