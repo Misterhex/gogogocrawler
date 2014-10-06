@@ -162,9 +162,14 @@ func ParseRawSource(html string) (string, error) {
 	}
 }
 
-func IsVideoContentType(source string) bool {
+func IsVideoContentType(source string) (isVideo bool) {
+	isVideo = false
 
-	var isVideo = false
+	defer func() {
+		if e := recover(); e != nil {
+			log.Println("panic in IsVideoContentType: ", e)
+		}
+	}()
 
 	res, err := http.Get(source)
 	if err != nil {
