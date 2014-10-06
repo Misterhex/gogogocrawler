@@ -21,21 +21,20 @@ type Movie struct {
 }
 
 const MongodbConnString = "mongodb://goblintechie:test1234@ds039850.mongolab.com:39850/goblintechdb"
-const Take = 50
 
 func main() {
 
 	go func() {
-		var movieResult = crawlers.CrawlMovie(takeMostOutdated(getCategories(), Take))
+		movieResult := crawlers.CrawlMovie(shuffle(getCategories()))
 
 		for {
 			select {
 			case movie := <-movieResult:
-				saveMovieIfNotExistOrOutdated(movie)
+				saveMovie(movie)
 
 			case <-time.After(time.Minute * 2):
 				log.Println("no more movie detected ... try to re-run")
-				movieResult = crawlers.CrawlMovie(takeMostOutdated(getCategories(), Take))
+				movieResult = crawlers.CrawlMovie(shuffle(getCategories()))
 			}
 		}
 	}()
@@ -43,7 +42,7 @@ func main() {
 	<-make(chan int)
 }
 
-func saveMovieIfNotExistOrOutdated(movie crawlers.Movie) {
+func saveMovie(movie crawlers.Movie) {
 	session, err := mgo.Dial(MongodbConnString)
 	defer session.Close()
 	c := session.DB("goblintechdb").C("movies")
@@ -93,75 +92,12 @@ func getCategories() []string {
 	return slice
 }
 
-func takeMostOutdated(categories []string, take int) []string {
-
-	session, err := mgo.Dial(MongodbConnString)
-	defer session.Close()
-	c := session.DB("goblintechdb").C("movies")
-
-	var result []string
-
-	err = c.Find(nil).Sort("scraptime").Distinct("category", &result)
-
-	if err != nil {
-		log.Println("unable to take most outdated")
-		shuffle(categories)
-		return categories[:take]
-	} else {
-
-		log.Println(result)
-		origin := "http://www.gogoanime.com/category/"
-		dbCategories := make([]string, 0)
-		for _, shortCat := range result {
-			var url = origin + shortCat
-			dbCategories = append(dbCategories, url)
-		}
-
-		diff := difference(categories, dbCategories)
-
-		log.Println(len(categories))
-		log.Println(len(dbCategories))
-		log.Println(len(diff))
-
-		r := append(diff, categories...)
-
-		return r[:take]
-	}
-}
-
-func difference(slice1 []string, slice2 []string) []string {
-	var diff []string
-
-	// Loop two times, first to find slice1 strings not in slice2,
-	// second loop to find slice2 strings not in slice1
-	for i := 0; i < 2; i++ {
-		for _, s1 := range slice1 {
-			found := false
-			for _, s2 := range slice2 {
-				if s1 == s2 {
-					found = true
-					break
-				}
-			}
-			// String not found. We add it to return slice
-			if !found {
-				diff = append(diff, s1)
-			}
-		}
-		// Swap the slices, only if it was the first loop
-		if i == 0 {
-			slice1, slice2 = slice2, slice1
-		}
-	}
-
-	return diff
-}
-
-func shuffle(slice []string) {
+func shuffle(slice []string) []string {
 	rand.Seed(time.Now().UnixNano())
 	n := len(slice)
 	for i := n - 1; i > 0; i-- {
 		j := rand.Intn(i + 1)
 		slice[i], slice[j] = slice[j], slice[i]
 	}
+	return slice
 }
