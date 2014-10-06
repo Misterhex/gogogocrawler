@@ -37,7 +37,7 @@ func main() {
 				}()
 				saveMovie(movie)
 
-			case <-time.After(time.Minute * 2):
+			case <-time.After(time.Minute * 6):
 				log.Println("no more movie detected ... try to re-run")
 				movieResult = crawlers.CrawlMovie(shuffle(getCategories()))
 			}
