@@ -5,7 +5,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -24,7 +23,7 @@ type Movie struct {
 
 const origin = "http://www.gogoanime.com"
 
-func CrawlMovie() chan Movie {
+func CrawlMovie(categories []string) chan Movie {
 
 	log.Println("starting to crawl movies ...")
 
@@ -32,7 +31,7 @@ func CrawlMovie() chan Movie {
 
 	go func() {
 
-		for _, category := range getCategories() {
+		for _, category := range categories {
 			log.Printf("crawling %v\n\n", category)
 
 			var episodes = getMovieEpisode(category, make([]string, 0))
@@ -73,7 +72,8 @@ func getMovieEpisode(category string, episodes []string) []string {
 		var isLast = true
 		doc.Find(".wp-pagenavi").Children().Each(func(i int, s *goquery.Selection) {
 			html, e := s.Html()
-			if e != nil && html == "Next" {
+
+			if e == nil && strings.TrimSpace(html) == "Next" {
 				isLast = false
 			}
 		})
@@ -81,7 +81,6 @@ func getMovieEpisode(category string, episodes []string) []string {
 		if !isLast {
 
 			var current = doc.Find(".wp-pagenavi span.current")
-
 			var closestNode = current.Next()
 
 			if nextPage, success := closestNode.Attr("href"); success {
@@ -94,6 +93,7 @@ func getMovieEpisode(category string, episodes []string) []string {
 }
 
 func getMovies(category string, episode string) []Movie {
+
 	var doc *goquery.Document
 	var e error
 
@@ -107,51 +107,28 @@ func getMovies(category string, episode string) []Movie {
 
 		if src, success := s.Attr("src"); success && (strings.HasSuffix(src, "mp4") || strings.HasSuffix(src, "flv")) {
 			if rawSource, e := getRawSource(src); e == nil {
-				movie := Movie{
-					Origin:    origin,
-					Category:  strings.Replace(category, origin+"/category/", "", -1),
-					Episode:   strings.Replace(episode, origin+"/", "", -1),
-					Source:    src,
-					RawSource: rawSource,
-					ScrapTime: time.Now(),
-				}
-				movies = append(movies, movie)
-			}
 
+				c := make(chan bool)
+				go func() {
+					c <- IsSourceVideoContentType(rawSource)
+				}()
+
+				if <-c {
+					movie := Movie{
+						Origin:    origin,
+						Category:  strings.Replace(category, origin+"/category/", "", -1),
+						Episode:   strings.Replace(episode, origin+"/", "", -1),
+						Source:    src,
+						RawSource: rawSource,
+						ScrapTime: time.Now(),
+					}
+					movies = append(movies, movie)
+				}
+			}
 		}
 	})
 
 	return movies
-}
-
-func getCategories() []string {
-
-	var doc *goquery.Document
-	var e error
-	var slice = make([]string, 0)
-
-	if doc, e = goquery.NewDocument("http://www.gogoanime.com/watch-anime-list"); e != nil {
-		return slice
-	}
-
-	doc.Find(".cat-item a").Each(func(i int, s *goquery.Selection) {
-
-		if href, success := s.Attr("href"); success {
-			slice = append(slice, href)
-		}
-	})
-	shuffle(slice)
-
-	return slice
-}
-
-func shuffle(slice []string) {
-	rand.Seed(time.Now().UnixNano())
-	n := len(slice)
-	for i := n - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
-		slice[i], slice[j] = slice[j], slice[i]
-	}
 }
 
 func getRawSource(source string) (string, error) {
@@ -188,4 +165,23 @@ func ParseRawSource(html string) (string, error) {
 
 		return r, nil
 	}
+}
+
+func IsSourceVideoContentType(source string) bool {
+	var isVideo = false
+
+	res, err := http.Get(source)
+	if err != nil {
+		return isVideo
+	}
+
+	var contentType = res.Header.Get("content-type")
+
+	log.Printf("source  %v -> %v\n", source, contentType)
+
+	if contentType == "video/mp4" || contentType == "video/x-flv" {
+		isVideo = true
+	}
+
+	return isVideo
 }
