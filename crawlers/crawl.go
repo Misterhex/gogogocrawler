@@ -108,12 +108,7 @@ func getMovies(category string, episode string) []Movie {
 		if src, success := s.Attr("src"); success && (strings.HasSuffix(src, "mp4") || strings.HasSuffix(src, "flv")) {
 			if rawSource, e := getRawSource(src); e == nil {
 
-				c := make(chan bool)
-				go func() {
-					c <- IsSourceVideoContentType(rawSource)
-				}()
-
-				if <-c {
+				if IsVideoContentType(rawSource) {
 					movie := Movie{
 						Origin:    origin,
 						Category:  strings.Replace(category, origin+"/category/", "", -1),
@@ -167,21 +162,26 @@ func ParseRawSource(html string) (string, error) {
 	}
 }
 
-func IsSourceVideoContentType(source string) bool {
+func IsVideoContentType(source string) bool {
+
 	var isVideo = false
 
 	res, err := http.Get(source)
 	if err != nil {
+
+		log.Println("error when trying to determine video type")
+
+		return isVideo
+	} else {
+
+		var contentType = res.Header.Get("content-type")
+
+		log.Printf("source  %v -> %v\n", source, contentType)
+
+		if contentType == "video/mp4" || contentType == "video/x-flv" {
+			isVideo = true
+		}
+
 		return isVideo
 	}
-
-	var contentType = res.Header.Get("content-type")
-
-	log.Printf("source  %v -> %v\n", source, contentType)
-
-	if contentType == "video/mp4" || contentType == "video/x-flv" {
-		isVideo = true
-	}
-
-	return isVideo
 }

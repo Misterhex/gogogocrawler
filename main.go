@@ -32,7 +32,7 @@ func main() {
 			case movie := <-movieResult:
 				defer func() {
 					if e := recover(); e != nil {
-						log.Println("Panicked when saving movie: ", e)
+						log.Println("panic when saving movie: ", e)
 					}
 				}()
 				saveMovie(movie)
