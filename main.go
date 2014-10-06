@@ -30,6 +30,11 @@ func main() {
 		for {
 			select {
 			case movie := <-movieResult:
+				defer func() {
+					if e := recover(); e != nil {
+						fmt.Println("Panicked when saving movie: ", e)
+					}
+				}()
 				saveMovie(movie)
 
 			case <-time.After(time.Minute * 2):
