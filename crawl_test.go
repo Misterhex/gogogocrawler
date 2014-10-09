@@ -25,7 +25,7 @@ func TestShouldBeAbleToExtractPlaylist(t *testing.T) {
 
 func TestShouldReturnHackLegendWhenFiltered(t *testing.T) {
 
-	categories := make([]string, 1)
+	categories := make([]string, 0)
 	categories = append(categories, "http://www.gogoanime.com/category/a-channel")
 
 	result := FilterCategories(categories, "a")
@@ -41,10 +41,9 @@ func TestShouldReturnHackLegendWhenFiltered(t *testing.T) {
 
 func TestShouldReturnCategoriesThatStartWithNumberOnlyWhenPassedHex(t *testing.T) {
 
-	categories := make([]string, 2)
+	categories := make([]string, 0)
 	categories = append(categories, "http://www.gogoanime.com/category/a-channel")
 	categories = append(categories, "http://www.gogoanime.com/category/07-ghost")
-
 	result := FilterCategories(categories, "#")
 
 	if len(result) == 0 {
@@ -52,6 +51,6 @@ func TestShouldReturnCategoriesThatStartWithNumberOnlyWhenPassedHex(t *testing.T
 	}
 
 	if len(result) > 0 && result[0] != "http://www.gogoanime.com/category/07-ghost" {
-		t.Error("should be return 007 ghost category")
+		t.Error("should be return 07 ghost category")
 	}
 }

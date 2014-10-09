@@ -90,6 +90,7 @@ func main() {
 // }
 
 func FilterCategories(categories []string, startWithAlphabet string) []string {
+
 	result := make([]string, 0)
 
 	startWithAlphabet = strings.ToUpper(startWithAlphabet)
@@ -101,7 +102,7 @@ func FilterCategories(categories []string, startWithAlphabet string) []string {
 
 			trimmed := strings.Replace(v, "http://www.gogoanime.com/category/", "", -1)
 
-			if len(trimmed) > 0 && !r.MatchString(trimmed) {
+			if len(trimmed) > 0 && r.MatchString(string(trimmed[0])) {
 				result = append(result, v)
 			}
 		}
