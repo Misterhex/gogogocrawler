@@ -16,6 +16,7 @@ import (
 	"time"
 )
 
+const syncServerAddr = "http://107.170.115.50:8888"
 const origin = "http://www.gogoanime.com"
 
 type Movie struct {
@@ -72,6 +73,53 @@ func main() {
 	}()
 
 	<-make(chan int)
+}
+
+// func filterBySyncServer(categories []string) []string {
+
+// 	res, err := http.Get(syncServerAddr)
+// 	if err != nil {
+
+// 		log.Println("error when trying to get alphabets from sync server")
+
+// 		return nil
+
+// 	} else {
+// 		return nil
+// 	}
+// }
+
+func FilterCategories(categories []string, startWithAlphabet string) []string {
+	result := make([]string, 0)
+
+	startWithAlphabet = strings.ToUpper(startWithAlphabet)
+
+	if startWithAlphabet == "#" {
+		r, _ := regexp.Compile("[0-9]")
+
+		for _, v := range categories {
+
+			trimmed := strings.Replace(v, "http://www.gogoanime.com/category/", "", -1)
+
+			if len(trimmed) > 0 && !r.MatchString(trimmed) {
+				result = append(result, v)
+			}
+		}
+
+	} else {
+
+		for _, v := range categories {
+
+			trimmed := strings.Replace(v, "http://www.gogoanime.com/category/", "", -1)
+			trimmed = strings.ToUpper(trimmed)
+
+			if len(trimmed) > 0 && string(trimmed[0]) == startWithAlphabet {
+				result = append(result, v)
+			}
+		}
+	}
+
+	return result
 }
 
 func saveMovie(movie Movie) {
@@ -274,12 +322,22 @@ func ParseRawSource(html string) (string, error) {
 }
 
 func IsVideoContentType(source string) (isVideo bool) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	defer func() {
+		if e := recover(); e != nil {
+			log.Println("panic when checking IsVideoContentType: ", e)
+			isVideo = false
+		}
+	}()
 
 	isVideo = false
 
-	res, err := http.Get(source)
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", source, nil)
+	req.Close = true
+
+	res, err := client.Do(req)
+	defer res.Body.Close()
+
 	if err != nil {
 
 		log.Println("error when trying to determine video type")
