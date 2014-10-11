@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"runtime/debug"
 	"strings"
 	"time"
 )
@@ -111,6 +112,7 @@ func saveMovie(movie Movie) {
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("panic when saving movie: ", e)
+			debug.PrintStack()
 		}
 	}()
 
@@ -315,6 +317,7 @@ func IsVideoContentType(source string) (isVideo bool) {
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("panic when checking IsVideoContentType: ", e)
+			debug.PrintStack()
 			isVideo = false
 		}
 	}()
