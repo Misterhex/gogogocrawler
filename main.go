@@ -39,11 +39,12 @@ type MovieSchema struct {
 }
 
 const MongodbConnString = "mongodb://goblintechie:test1234@ds039850.mongolab.com:39850/goblintechdb"
+const CategoryUrlPrefix = "http://www.gogoanime.com/category/"
 
 func main() {
 
 	go func() {
-		movieResult := crawlMovie(shuffle(getCategories()))
+		movieResult := crawlMovie(shuffle(filterBySyncServer(getCategories())))
 
 		for {
 			select {
@@ -52,7 +53,7 @@ func main() {
 
 			case <-time.After(time.Second * 45):
 				log.Println("no more movie detected ... try to re-run")
-				movieResult = crawlMovie(shuffle(getCategories()))
+				movieResult = crawlMovie(shuffle(filterBySyncServer(getCategories())))
 			}
 		}
 	}()
@@ -60,19 +61,39 @@ func main() {
 	<-make(chan int)
 }
 
-// func filterBySyncServer(categories []string) []string {
+func filterBySyncServer(categories []string) []string {
+	result := make([]string, 0)
 
-// 	res, err := http.Get(syncServerAddr)
-// 	if err != nil {
+	res, err := http.Get(syncServerAddr)
+	if err != nil {
+		log.Println("error when trying to get alphabets from sync server")
+		debug.PrintStack()
+	} else {
 
-// 		log.Println("error when trying to get alphabets from sync server")
+		defer res.Body.Close()
 
-// 		return nil
+		bytes, err := ioutil.ReadAll(res.Body)
 
-// 	} else {
-// 		return nil
-// 	}
-// }
+		if err != nil {
+			log.Println("error when trying to get alphabets from sync server")
+			debug.PrintStack()
+		} else {
+			var receivedAlphabet = string(bytes)
+			log.Printf("received %v from sync server\n", receivedAlphabet)
+			for _, category := range categories {
+				categoryTrimmed := strings.Replace(category, CategoryUrlPrefix, "", -1)
+				categoryTrimmedFirstAlphabet := string(strings.ToUpper(categoryTrimmed)[0])
+				if len(category) > 0 && categoryTrimmedFirstAlphabet == strings.ToUpper(receivedAlphabet) {
+					result = append(result, category)
+				}
+			}
+		}
+	}
+
+	log.Printf("filterBySyncServer returning %v\n", result)
+
+	return result
+}
 
 func FilterCategories(categories []string, startWithAlphabet string) []string {
 
@@ -85,7 +106,7 @@ func FilterCategories(categories []string, startWithAlphabet string) []string {
 
 		for _, v := range categories {
 
-			trimmed := strings.Replace(v, "http://www.gogoanime.com/category/", "", -1)
+			trimmed := strings.Replace(v, CategoryUrlPrefix, "", -1)
 
 			if len(trimmed) > 0 && r.MatchString(string(trimmed[0])) {
 				result = append(result, v)
@@ -96,7 +117,7 @@ func FilterCategories(categories []string, startWithAlphabet string) []string {
 
 		for _, v := range categories {
 
-			trimmed := strings.Replace(v, "http://www.gogoanime.com/category/", "", -1)
+			trimmed := strings.Replace(v, CategoryUrlPrefix, "", -1)
 			trimmed = strings.ToUpper(trimmed)
 
 			if len(trimmed) > 0 && string(trimmed[0]) == startWithAlphabet {
