@@ -42,16 +42,33 @@ const MongodbConnString = "mongodb://goblintechie:test1234@ds039850.mongolab.com
 const CategoryUrlPrefix = "http://www.gogoanime.com/category/"
 
 func main() {
-
+	defer func() {
+		if e := recover(); e != nil {
+			log.Println("global main panic: ", e)
+			debug.PrintStack()
+		}
+	}()
 	go func() {
 		movieResult := crawlMovie(shuffle(filterBySyncServer(getCategories())))
 
 		for {
 			select {
 			case movie := <-movieResult:
+				defer func() {
+					if e := recover(); e != nil {
+						log.Println("global panic when saving movie: ", e)
+						debug.PrintStack()
+					}
+				}()
 				saveMovie(movie)
 
 			case <-time.After(time.Second * 45):
+				defer func() {
+					if e := recover(); e != nil {
+						log.Println("global panic when time expired: ", e)
+						debug.PrintStack()
+					}
+				}()
 				log.Println("no more movie detected ... try to re-run")
 				movieResult = crawlMovie(shuffle(filterBySyncServer(getCategories())))
 			}
