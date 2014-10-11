@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -40,8 +39,6 @@ type MovieSchema struct {
 
 const MongodbConnString = "mongodb://goblintechie:test1234@ds039850.mongolab.com:39850/goblintechdb"
 
-var mutex = &sync.Mutex{}
-
 func main() {
 
 	go func() {
@@ -50,23 +47,10 @@ func main() {
 		for {
 			select {
 			case movie := <-movieResult:
-				defer func() {
-					if e := recover(); e != nil {
-						log.Println("panic when saving movie: ", e)
-					}
-				}()
 				saveMovie(movie)
 
 			case <-time.After(time.Second * 45):
-				defer func() {
-					if e := recover(); e != nil {
-						log.Println("panic when re-running", e)
-					}
-				}()
-
 				log.Println("no more movie detected ... try to re-run")
-				mutex.Lock()
-				defer mutex.Unlock()
 				movieResult = crawlMovie(shuffle(getCategories()))
 			}
 		}
@@ -124,6 +108,12 @@ func FilterCategories(categories []string, startWithAlphabet string) []string {
 }
 
 func saveMovie(movie Movie) {
+	defer func() {
+		if e := recover(); e != nil {
+			log.Println("panic when saving movie: ", e)
+		}
+	}()
+
 	session, err := mgo.Dial(MongodbConnString)
 	defer session.Close()
 	c := session.DB("goblintechdb").C("movies")
@@ -190,7 +180,6 @@ func crawlMovie(categories []string) chan Movie {
 	out := make(chan Movie)
 
 	go func() {
-
 		for _, category := range categories {
 			log.Printf("crawling %v\n\n", category)
 
