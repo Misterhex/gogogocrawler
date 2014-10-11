@@ -350,7 +350,6 @@ func IsVideoContentType(source string) (isVideo bool) {
 	req.Close = true
 
 	res, err := client.Do(req)
-	defer res.Body.Close()
 
 	if err != nil {
 
@@ -359,6 +358,7 @@ func IsVideoContentType(source string) (isVideo bool) {
 		return isVideo
 	} else {
 
+		defer res.Body.Close()
 		var contentType = res.Header.Get("content-type")
 
 		log.Printf("source  %v -> %v\n", source, contentType)
