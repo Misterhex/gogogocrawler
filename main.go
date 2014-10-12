@@ -155,6 +155,11 @@ func saveMovie(movie Movie) {
 	}()
 
 	session, err := mgo.Dial(MongodbConnString)
+	if err != nil {
+		log.Println("could not open session to mongodb")
+		return
+	}
+
 	defer session.Close()
 	c := session.DB("goblintechdb").C("movies")
 
@@ -175,7 +180,7 @@ func saveMovie(movie Movie) {
 		if d.Minutes() > 10 {
 			changeInfo, err := c.Upsert(bson.M{"_id": queriedMovie.Id}, movie)
 			if err != nil {
-				log.Println(err)
+				log.Println("error when trying to upsert", err)
 			} else {
 				log.Printf("**** Upserted **** %v %v %v\n\n last updated since %v\n\n", queriedMovie.Id, changeInfo, movie, d)
 			}
@@ -319,13 +324,15 @@ func getRawSource(source string) (string, error) {
 
 	res, err := http.Get(source)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("getRawSource, error when trying http get", err)
+		return "", err
 	}
 
 	htmlBytes, err := ioutil.ReadAll(res.Body)
 	res.Body.Close()
 	if err != nil {
-		log.Fatal(err)
+		log.Println("getRawSource, error when trying to read bytes", err)
+		return "", nil
 	}
 
 	s := string(htmlBytes)
@@ -345,7 +352,11 @@ func ParseRawSource(html string) (string, error) {
 		s2 := slice[len(slice)-1]
 		r := strings.Replace(s2, "url: '", "", -1)
 		r = strings.Replace(r, "',", "", -1)
-		r, _ = url.QueryUnescape(r)
+		r, err = url.QueryUnescape(r)
+
+		if err != nil {
+			return "", err
+		}
 
 		return r, nil
 	}
@@ -364,14 +375,17 @@ func IsVideoContentType(source string) (isVideo bool) {
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", source, nil)
+	if err != nil {
+		log.Println("cannot open requets to ", source)
+		return isVideo
+	}
+
 	req.Close = true
 
 	res, err := client.Do(req)
 
 	if err != nil {
-
 		log.Println("error when trying to determine video type")
-
 		return isVideo
 	} else {
 
