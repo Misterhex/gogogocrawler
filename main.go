@@ -42,33 +42,16 @@ const MongodbConnString = "mongodb://goblintechie:test1234@ds039850.mongolab.com
 const CategoryUrlPrefix = "http://www.gogoanime.com/category/"
 
 func main() {
-	defer func() {
-		if e := recover(); e != nil {
-			log.Println("global main panic: ", e)
-			debug.PrintStack()
-		}
-	}()
+
 	go func() {
 		movieResult := crawlMovie(shuffle(filterBySyncServer(getCategories())))
 
 		for {
 			select {
 			case movie := <-movieResult:
-				defer func() {
-					if e := recover(); e != nil {
-						log.Println("global panic when saving movie: ", e)
-						debug.PrintStack()
-					}
-				}()
 				saveMovie(movie)
 
 			case <-time.After(time.Second * 45):
-				defer func() {
-					if e := recover(); e != nil {
-						log.Println("global panic when time expired: ", e)
-						debug.PrintStack()
-					}
-				}()
 				log.Println("no more movie detected ... try to re-run")
 				movieResult = crawlMovie(shuffle(filterBySyncServer(getCategories())))
 			}
@@ -84,26 +67,24 @@ func filterBySyncServer(categories []string) []string {
 	res, err := http.Get(syncServerAddr)
 	if err != nil {
 		log.Println("error when trying to get alphabets from sync server")
-		debug.PrintStack()
-	} else {
+		return result
+	}
 
-		defer res.Body.Close()
+	defer res.Body.Close()
 
-		bytes, err := ioutil.ReadAll(res.Body)
+	bytes, err := ioutil.ReadAll(res.Body)
 
-		if err != nil {
-			log.Println("error when trying to get alphabets from sync server")
-			debug.PrintStack()
-		} else {
-			var receivedAlphabet = string(bytes)
-			log.Printf("received %v from sync server\n", receivedAlphabet)
-			for _, category := range categories {
-				categoryTrimmed := strings.Replace(category, CategoryUrlPrefix, "", -1)
-				categoryTrimmedFirstAlphabet := string(strings.ToUpper(categoryTrimmed)[0])
-				if len(category) > 0 && categoryTrimmedFirstAlphabet == strings.ToUpper(receivedAlphabet) {
-					result = append(result, category)
-				}
-			}
+	if err != nil {
+		log.Println("error when trying to get alphabets from sync server")
+		return result
+	}
+
+	var receivedAlphabet = string(bytes)
+	log.Printf("received %v from sync server\n", receivedAlphabet)
+	for _, category := range categories {
+		categoryTrimmed := strings.Replace(category, CategoryUrlPrefix, "", -1)
+		if len(category) > 0 && string(strings.ToUpper(categoryTrimmed)[0]) == strings.ToUpper(receivedAlphabet) {
+			result = append(result, category)
 		}
 	}
 
@@ -147,12 +128,6 @@ func FilterCategories(categories []string, startWithAlphabet string) []string {
 }
 
 func saveMovie(movie Movie) {
-	defer func() {
-		if e := recover(); e != nil {
-			log.Println("panic when saving movie: ", e)
-			debug.PrintStack()
-		}
-	}()
 
 	session, err := mgo.Dial(MongodbConnString)
 	if err != nil {
@@ -343,8 +318,9 @@ func getRawSource(source string) (string, error) {
 func ParseRawSource(html string) (string, error) {
 	re, err := regexp.Compile("url:\\s\\'http\\:.*\\'\\,")
 	if err != nil {
-		log.Fatal(err)
+		panic("cannot compile regex")
 	}
+
 	slice := re.FindAllString(html, -1)
 	if len(slice) == 0 {
 		return "", errors.New("unable to parse raw source")
@@ -373,31 +349,21 @@ func IsVideoContentType(source string) (isVideo bool) {
 
 	isVideo = false
 
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", source, nil)
-	if err != nil {
-		log.Println("cannot open requets to ", source)
-		return isVideo
-	}
-
-	req.Close = true
-
-	res, err := client.Do(req)
-
+	res, err := http.Get(source)
 	if err != nil {
 		log.Println("error when trying to determine video type")
 		return isVideo
-	} else {
-
-		defer res.Body.Close()
-		var contentType = res.Header.Get("content-type")
-
-		log.Printf("source  %v -> %v\n", source, contentType)
-
-		if contentType == "video/mp4" || contentType == "video/x-flv" {
-			isVideo = true
-		}
-
-		return isVideo
 	}
+
+	defer res.Body.Close()
+
+	var contentType = res.Header.Get("content-type")
+
+	log.Printf("source  %v -> %v\n", source, contentType)
+
+	if contentType == "video/mp4" || contentType == "video/x-flv" {
+		isVideo = true
+	}
+
+	return isVideo
 }
