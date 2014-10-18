@@ -182,13 +182,11 @@ func saveMovie(movie Movie) {
 		}
 	} else {
 		d := time.Since(queriedMovie.ScrapTime)
-		if d.Minutes() > 10 {
-			changeInfo, err := c.Upsert(bson.M{"_id": queriedMovie.Id}, movie)
-			if err != nil {
-				log.Println("error when trying to upsert", err)
-			} else {
-				log.Printf("**** Upserted **** %v %v %v\n\n last updated since %v\n\n", queriedMovie.Id, changeInfo, movie, d)
-			}
+		changeInfo, err := c.Upsert(bson.M{"_id": queriedMovie.Id}, movie)
+		if err != nil {
+			log.Println("error when trying to upsert", err)
+		} else {
+			log.Printf("**** Upserted **** %v %v %v\n\n last updated since %v\n\n", queriedMovie.Id, changeInfo, movie, d)
 		}
 	}
 }
