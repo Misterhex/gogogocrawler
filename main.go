@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/PuerkitoBio/goquery"
 	"gopkg.in/mgo.v2"
@@ -10,14 +11,20 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"runtime/debug"
 	"strings"
 	"time"
 )
 
-const syncServerAddr = "http://107.170.115.50:8888"
 const origin = "http://www.gogoanime.com"
+const CategoryUrlPrefix = "http://www.gogoanime.com/category/"
+
+type Config struct {
+	SyncServerAddr    string
+	MongoDbConnString string
+}
 
 type Movie struct {
 	RawSource string
@@ -38,10 +45,17 @@ type MovieSchema struct {
 	ScrapTime time.Time
 }
 
-const MongodbConnString = "mongodb://goblintechie:test1234@ds039850.mongolab.com:39850/goblintechdb"
-const CategoryUrlPrefix = "http://www.gogoanime.com/category/"
+var config = Config{}
 
 func main() {
+
+	parseConfig, err := ParseConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	config = parseConfig
+	log.Println(config)
 
 	go func() {
 		movieResult := crawlMovie(shuffle(filterBySyncServer(getCategories())))
@@ -61,10 +75,26 @@ func main() {
 	<-make(chan int)
 }
 
+func ParseConfig() (Config, error) {
+
+	var config = Config{}
+
+	configFile, err := os.Open("config.json")
+	if err != nil {
+		return config, err
+	}
+
+	jsonParser := json.NewDecoder(configFile)
+	if err = jsonParser.Decode(&config); err != nil {
+		return config, err
+	}
+
+	return config, nil
+}
+
 func filterBySyncServer(categories []string) []string {
 	result := make([]string, 0)
-
-	res, err := http.Get(syncServerAddr)
+	res, err := http.Get(config.SyncServerAddr)
 	if err != nil {
 		log.Println("error when trying to get alphabets from sync server")
 		return result
@@ -129,7 +159,7 @@ func FilterCategories(categories []string, startWithAlphabet string) []string {
 
 func saveMovie(movie Movie) {
 
-	session, err := mgo.Dial(MongodbConnString)
+	session, err := mgo.Dial(config.MongoDbConnString)
 	if err != nil {
 		log.Println("could not open session to mongodb")
 		return

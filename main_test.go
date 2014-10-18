@@ -54,3 +54,12 @@ func TestShouldReturnCategoriesThatStartWithNumberOnlyWhenPassedHex(t *testing.T
 		t.Error("should be return 07 ghost category")
 	}
 }
+
+func TestCanParseCorrectConfig(t *testing.T) {
+	settings, err := ParseConfig()
+
+	if err != nil || settings.MongoDbConnString == "" || settings.SyncServerAddr == "" {
+		t.Error(err)
+		t.Error("cannot parse config")
+	}
+}
